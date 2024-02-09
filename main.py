@@ -77,7 +77,7 @@ def sign():
         cursor.close()
         conn.commit()
 
-        if password == user['password']:
+        if password == user['Password']:
             user = load_user(user['ID'])
 
             flask_login.login_user(user)
@@ -90,4 +90,4 @@ def sign():
 @flask_login.login_required
 def fed():
 
-    return flask_login.current_user
+    return render_template('tive.feed.jinja')
