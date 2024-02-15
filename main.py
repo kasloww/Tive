@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, g, render_template, request, redirect
 import flask_login
 import pymysql
 import pymysql.cursors
@@ -27,11 +27,11 @@ class User:
 
 @login_manager.user_loader
 def load_user(user_id):
-    cursor = conn.cursor()
+    cursor = get_db().cursor()
     cursor.execute("SELECT * from `Users` WHERE `ID` = " + str(user_id))
     result = cursor.fetchone()
     cursor.close()
-    conn.commit()
+    get_db().commit()
 
     if result is None:
 
@@ -39,15 +39,28 @@ def load_user(user_id):
     
     return User(result['ID'], result['User'], result)
 
-conn = pymysql.connect(
-    database="kdavidson_",
-    user="kdavidson",
-    password="231534561",
-    host="10.100.33.60",
-    cursorclass=pymysql.cursors.DictCursor
-)
-if __name__ == '__main__':
-    app.run()
+def connect_db():
+    return pymysql.connect(
+        host="10.100.33.60",
+        user="kdavidson",
+        password="231534561",
+        database="kdavidson_",
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=True
+    )
+
+def get_db():
+    '''Opens a new database connection per request.'''        
+    if not hasattr(g, 'db'):
+        g.db = connect_db()
+    return g.db    
+
+@app.teardown_appcontext
+def close_db(error):
+    '''Closes the database connection at the end of request.'''    
+    if hasattr(g, 'db'):
+        g.db.close() 
+
 @app.route('/')
 def index():
     if flask_login.current_user.is_authenticated:
@@ -60,10 +73,10 @@ def reg():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        cursor = conn.cursor()
+        cursor = get_db().cursor()
         cursor.execute(f"INSERT INTO `Users` (`User`, `Password`) VALUES ('{username}', '{password}')")
         cursor.close()
-        conn.commit()
+        get_db().commit()
     return render_template('tive.signup.jinja')
     
 @app.route('/signin', methods=['GET', 'POST'])
@@ -71,11 +84,11 @@ def sign():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        cursor = conn.cursor()
+        cursor = get_db().cursor()
         cursor.execute(f"SELECT * FROM `Users` WHERE `User` = '{username}'")
         user = cursor.fetchone()
         cursor.close()
-        conn.commit()
+        get_db().commit()
 
         if password == user['Password']:
             user = load_user(user['ID'])
@@ -89,5 +102,18 @@ def sign():
 @app.route('/feed')
 @flask_login.login_required
 def fed():
+    cursor = get_db().cursor()
 
-    return render_template('tive.feed.jinja')
+    cursor.execute("SELECT `Description`, `User_ID`, `Timestamp` FROM `Posts`")
+
+    results = cursor.fetchall()
+    
+    return render_template('tive.feed.jinja', posted=results)
+
+@app.route('/post', methods=["POST"])
+@flask_login.login_required
+def posted():
+    desc = request.form['Description']
+    cursor = get_db().cursor()
+
+    cursor.execute("INSERT INTO `Posts`(`Description`, `User_ID`)")
