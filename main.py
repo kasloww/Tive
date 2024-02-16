@@ -113,7 +113,8 @@ def fed():
 @app.route('/post', methods=["POST"])
 @flask_login.login_required
 def posted():
-    desc = request.form['Description']
+    posting = request.form['post_made']
+
     cursor = get_db().cursor()
 
-    cursor.execute("INSERT INTO `Posts`(`Description`, `User_ID`)")
+    cursor.execute(f"INSERT INTO `Posts`(`Description`, `User_ID`) VALUES ('{posting}')")
