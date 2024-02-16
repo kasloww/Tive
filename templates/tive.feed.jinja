@@ -47,7 +47,7 @@ a {
 </head>
 <body>
 <img src="/static/tive.png" alt="Tive Logo" class="center" height="200">
-    {% for posts in posting  %}
+    {% for posts in posting %}
     <li  class="list-group-item list-group-item-info">
             {{ posts ['Description'] }}
             <form method="POST" action="/post">
